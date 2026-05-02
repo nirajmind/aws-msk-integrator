@@ -1,0 +1,11 @@
+msk:
+  bootstrap_servers:
+    - ${MSK_BOOTSTRAP}
+  topic: ${MSK_TOPIC}
+  security_protocol: "SASL_SSL"
+  sasl_mechanism: "AWS_MSK_IAM"
+
+app:
+  environment: "local"
+  retries: 3
+  retry_backoff_sec: 2
