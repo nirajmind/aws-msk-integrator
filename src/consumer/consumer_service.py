@@ -1,24 +1,33 @@
 from kafka import KafkaConsumer
-from src.common.msk_auth import get_iam_auth
+from aws_msk_iam_sasl_signer.MSKAuthTokenProvider import generate_auth_token
 import json
+import os
+import dotenv
 
-class ConsumerService:
-    def __init__(self, config, logger):
-        self.logger = logger
-        self.config = config["msk"]
+dotenv.load_dotenv()
 
-        self.consumer = KafkaConsumer(
-            self.config["topic"],
-            bootstrap_servers=self.config["bootstrap_servers"],
-            security_protocol=self.config["security_protocol"],
-            sasl_mechanism=self.config["sasl_mechanism"],
-            sasl_oauth_token_provider=get_iam_auth(),
-            value_deserializer=lambda v: json.loads(v.decode("utf-8")),
-            auto_offset_reset="earliest",
-            enable_auto_commit=True
-        )
+class TokenProvider:
+    def token(self):
+        return generate_auth_token()
 
-    def start(self):
-        self.logger.info("Consumer started...")
-        for msg in self.consumer:
-            self.logger.info(f"Received: {msg.value}")
+bootstrap = os.getenv("MSK_BOOTSTRAP")
+topic = os.getenv("MSK_TOPIC")
+
+print("BOOTSTRAP:", os.getenv("MSK_BOOTSTRAP"))
+print("TOPIC:", os.getenv("MSK_TOPIC"))
+
+consumer = KafkaConsumer(
+    topic,
+    bootstrap_servers=[bootstrap],
+    security_protocol="SASL_SSL",
+    sasl_mechanism="OAUTHBEARER",
+    sasl_oauth_token_provider=TokenProvider(),
+    value_deserializer=lambda v: json.loads(v.decode("utf-8")),
+    auto_offset_reset="earliest",
+    enable_auto_commit=True
+)
+
+print("Waiting for messages...")
+
+for msg in consumer:
+    print("Received:", msg.value)

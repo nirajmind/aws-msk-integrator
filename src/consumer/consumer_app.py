@@ -1,13 +1,26 @@
-from src.common.config_loader import load_config
-from src.common.logger import setup_logger
-from src.consumer.consumer_service import ConsumerService
+from kafka import KafkaConsumer
+from aws_msk_iam_sasl_signer.MSKAuthTokenProvider import generate_auth_token
+import json
+import os
 
-def main():
-    logger = setup_logger("consumer")
-    config = load_config()
+def get_token():
+    return generate_auth_token()
 
-    consumer = ConsumerService(config, logger)
-    consumer.start()
+bootstrap = os.getenv("MSK_BOOTSTRAP")
+topic = os.getenv("MSK_TOPIC")
 
-if __name__ == "__main__":
-    main()
+consumer = KafkaConsumer(
+    topic,
+    bootstrap_servers=[bootstrap],
+    security_protocol="SASL_SSL",
+    sasl_mechanism="OAUTHBEARER",
+    sasl_oauth_token_provider=get_token,
+    value_deserializer=lambda v: json.loads(v.decode("utf-8")),
+    auto_offset_reset="earliest",
+    enable_auto_commit=True
+)
+
+print("Waiting for messages...")
+
+for msg in consumer:
+    print("Received:", msg.value)

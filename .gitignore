@@ -1,0 +1,15 @@
+# Python
+venv/
+__pycache__/
+
+# AWS
+.aws/
+*.pem
+
+# Environment
+.env
+config/sample.env
+config/*.env
+
+# Logs
+*.log

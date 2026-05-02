@@ -1,26 +1,30 @@
 from kafka import KafkaProducer
-from src.common.msk_auth import get_iam_auth
+from aws_msk_iam_sasl_signer.MSKAuthTokenProvider import generate_auth_token
 import json
-import time
+import os
+import dotenv
 
-class ProducerService:
-    def __init__(self, config, logger):
-        self.logger = logger
-        self.config = config["msk"]
+dotenv.load_dotenv()
 
-        self.producer = KafkaProducer(
-            bootstrap_servers=self.config["bootstrap_servers"],
-            security_protocol=self.config["security_protocol"],
-            sasl_mechanism=self.config["sasl_mechanism"],
-            sasl_oauth_token_provider=get_iam_auth(),
-            value_serializer=lambda v: json.dumps(v).encode("utf-8")
-        )
+class TokenProvider:
+    def token(self):
+        return generate_auth_token()
 
-    def send(self, message):
-        try:
-            self.producer.send(self.config["topic"], message)
-            self.producer.flush()
-            self.logger.info(f"Message sent: {message}")
-        except Exception as e:
-            self.logger.error(f"Producer error: {e}")
-            raise
+bootstrap = os.getenv("MSK_BOOTSTRAP")
+topic = os.getenv("MSK_TOPIC")
+
+print("BOOTSTRAP:", os.getenv("MSK_BOOTSTRAP"))
+print("TOPIC:", os.getenv("MSK_TOPIC"))
+
+producer = KafkaProducer(
+    bootstrap_servers=[bootstrap],
+    security_protocol="SASL_SSL",
+    sasl_mechanism="OAUTHBEARER",
+    sasl_oauth_token_provider=TokenProvider(),
+    value_serializer=lambda v: json.dumps(v).encode("utf-8")
+)
+
+producer.send(topic, {"msg": "Hello from Windows!"})
+producer.flush()
+
+print("Sent!")
