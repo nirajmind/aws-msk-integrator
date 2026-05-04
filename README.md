@@ -87,6 +87,10 @@ python -m src.consumer.consumer_app
 
 python -m src.producer.producer_app
 
+### 6. Create Topic
+
+python -m src.admin.admin_app
+
 ---
 
 ## 🧪 Running Tests

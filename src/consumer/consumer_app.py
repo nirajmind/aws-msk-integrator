@@ -1,26 +1,34 @@
-from kafka import KafkaConsumer
-from aws_msk_iam_sasl_signer.MSKAuthTokenProvider import generate_auth_token
-import json
-import os
+from confluent_kafka import Consumer
+from src.config.settings import SSL_CONFIG, TOPIC, GROUP_ID
+from src.common.logger import get_logger
 
-def get_token():
-    return generate_auth_token()
+log = get_logger("consumer")
 
-bootstrap = os.getenv("MSK_BOOTSTRAP")
-topic = os.getenv("MSK_TOPIC")
+def main():
+    log.info(f"BOOTSTRAP: {SSL_CONFIG['bootstrap.servers']}")
+    log.info(f"TOPIC: {TOPIC}")
+    log.info(f"GROUP: {GROUP_ID}")
 
-consumer = KafkaConsumer(
-    topic,
-    bootstrap_servers=[bootstrap],
-    security_protocol="SASL_SSL",
-    sasl_mechanism="OAUTHBEARER",
-    sasl_oauth_token_provider=get_token,
-    value_deserializer=lambda v: json.loads(v.decode("utf-8")),
-    auto_offset_reset="earliest",
-    enable_auto_commit=True
-)
+    conf = {
+        **SSL_CONFIG,
+        "group.id": GROUP_ID,
+        "auto.offset.reset": "earliest"
+    }
 
-print("Waiting for messages...")
+    consumer = Consumer(conf)
+    consumer.subscribe([TOPIC])
 
-for msg in consumer:
-    print("Received:", msg.value)
+    log.info("Consuming...")
+
+    while True:
+        msg = consumer.poll(1.0)
+        if msg is None:
+            continue
+        if msg.error():
+            log.error(msg.error())
+            continue
+
+        log.info(f"Got: {msg.value().decode('utf-8')}")
+
+if __name__ == "__main__":
+    main()

@@ -1,16 +1,26 @@
-from src.common.config_loader import load_config
-from src.common.logger import setup_logger
-from src.producer.producer_service import ProducerService
-import time
+from confluent_kafka import Producer
+from src.config.settings import SSL_CONFIG, TOPIC
+from src.common.logger import get_logger
+
+log = get_logger("producer")
+
+def delivery_report(err, msg):
+    if err:
+        log.error(f"Delivery failed: {err}")
+    else:
+        log.info(f"Delivered to {msg.topic()} [{msg.partition()}] offset {msg.offset()}")
 
 def main():
-    logger = setup_logger("producer")
-    config = load_config()
+    log.info(f"BOOTSTRAP: {SSL_CONFIG['bootstrap.servers']}")
+    log.info(f"TOPIC: {TOPIC}")
 
-    producer = ProducerService(config, logger)
+    producer = Producer(SSL_CONFIG)
 
-    message = {"msg": "Hello from MSK Lab", "ts": time.time()}
-    producer.send(message)
+    for i in range(10):
+        producer.produce(TOPIC, f"msg-{i}".encode("utf-8"), callback=delivery_report)
+        producer.flush()
+
+    log.info("Produced 10 messages")
 
 if __name__ == "__main__":
     main()
