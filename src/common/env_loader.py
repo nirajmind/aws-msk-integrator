@@ -5,6 +5,6 @@ def load_env():
     load_dotenv()
     return {
         "bootstrap": os.getenv("MSK_BOOTSTRAP"),
-        "topic": os.getenv("TOPIC"),
+        "topic": os.getenv("MSK_TOPIC", "topics1"),
         "group_id": os.getenv("GROUP_ID", "demo-group")
     }
